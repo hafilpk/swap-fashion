@@ -49,6 +49,12 @@ class WardrobeListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+class PublicListingsView(generics.ListAPIView):
+    serializer_class = ClothingListingSerializer
+    permission_classes = []
+    
+    def get_queryset(self):
+        return ClothingListing.objects.filter(is_public=True).order_by('-created_at')[:20]
 
 class ClothingListingListCreateView(generics.ListCreateAPIView):
     serializer_class = ClothingListingSerializer
