@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from .serializers import UserSerializer, LoginSerializer, WardrobeSerializer, ClothingListingSerializer, MessageSerializer, UserLocationSerializer
-from .models import Wardrobe, ClothingListing, Message, UserLocation
+from .models import Wardrobe, ClothingListing, Message
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
 from rest_framework import serializers
@@ -104,7 +104,7 @@ class MessageListCreateView(generics.ListCreateAPIView):
             raise serializers.ValidationError("Invalid receiver for this listing.")
         serializer.save(sender=self.request.user, receiver=receiver)     
 
-class UserMessagesView(generics.ListAPIView):  # Inbox-style
+class UserMessagesView(generics.ListAPIView):
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated] 
 

@@ -41,7 +41,7 @@ class ClothingListingSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClothingListing
         fields = '__all__'
-        read_only_fields = ('id', 'created_at', 'eco_impact')
+        read_only_fields = ('id', 'created_at')
 
     def create(self, validated_data):
         location_str = validated_data.pop('location', None)
@@ -50,7 +50,7 @@ class ClothingListingSerializer(serializers.ModelSerializer):
             try:
                 lon, lat = map(float, location_str.split(','))
                 from django.contrib.gis.geos import Point
-                instance.location = Point(lon, lat, srid=4326)  # WGS84
+                instance.location = Point(lon, lat, srid=4326)
                 instance.save()
             except ValueError:
                 pass
