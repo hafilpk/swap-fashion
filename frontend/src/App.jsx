@@ -39,6 +39,7 @@ function App() {
               <nav className="space-x-4">
                 <a href="/wardrobe" className="hover:underline">My Wardrobe</a>
                 <a href="/listings" className="hover:underline">Browse Swaps</a>
+                <a href="/inbox" className="hover:underline">Inbox</a>
               </nav>
               <button onClick={handleLogout} className="bg-red-500 px-4 py-1 rounded">Logout</button>
             </div>
@@ -46,22 +47,11 @@ function App() {
         </header>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route
-            path="/register"
-            element={<Register setUser={setUser} setToken={setToken} />}
-          />
-          <Route
-            path="/login"
-            element={<Login setUser={setUser} setToken={setToken} />}
-          />
-          <Route
-            path="/wardrobe"
-            element={user ? <Wardrobe user={user} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/listings"
-            element={user ? <Listings user={user} /> : <Navigate to="/login" />}
-          />
+          <Route path="/register" element={<Register setUser={setUser} setToken={setToken} />} />
+          <Route path="/login" element={<Login setUser={setUser} setToken={setToken} />} />
+          <Route path="/wardrobe" element={user ? <Wardrobe user={user} /> : <Navigate to="/login" />} />
+          <Route path="/listings" element={user ? <Listings user={user} /> : <Navigate to="/login" />} />
+          <Route path="/inbox" element={user ? <Inbox user={user} /> : <Navigate to="/login" />} />
         </Routes>
       </div>
     </Router>
@@ -395,28 +385,76 @@ function Wardrobe({ user }) {
 function Listings({ user }) {
   const [allListings, setAllListings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          });
+        },
+        (err) => {
+          setError('Location access denied. Showing all public listings.');
+          console.error('Geolocation error:', err);
+        }
+      );
+    } else {
+      setError('Geolocation not supported.');
+    }
+  }, []);
 
   useEffect(() => {
     const fetchListings = async () => {
+      setLoading(true);
       try {
-        const res = await axios.get(`${API_BASE}/public-listings/`);
+        let url = `${API_BASE}/public-listings/`;
+        if (userLocation) {
+          url = `${API_BASE}/nearby-listings/?lat=${userLocation.lat}&lon=${userLocation.lon}&radius=10`;
+        }
+        const res = await axios.get(url);
         setAllListings(res.data);
       } catch (err) {
         console.error('Error fetching listings:', err);
+        setError('Failed to load listings.');
       } finally {
         setLoading(false);
       }
     };
     fetchListings();
-  }, []);
+  }, [userLocation]);
 
-  if (loading) return <div className="p-8">Loading listings...</div>;
+  const handleMessage = async (listingId) => {
+    const content = prompt('Enter your message:');
+    if (!content) return;
+    try {
+      await axios.post(`${API_BASE}/messages/`, {
+        listing: listingId,
+        content: content,
+      });
+      alert('Message sent!');
+    } catch (err) {
+      alert('Failed to send message: ' + err.message);
+    }
+  };
+
+  if (loading) return <div className="p-8">Loading nearby swaps...</div>;
+  if (error) return <div className="p-8 text-red-500">{error}</div>;
 
   return (
     <div className="p-8">
       <h2 className="text-2xl mb-4">
-        Available Swaps ({allListings.length})
+        Nearby Swaps ({allListings.length} within {userLocation ? '10km' : 'all areas'})
       </h2>
+
+      {userLocation && (
+        <p className="mb-4 text-sm">
+          Your location: {userLocation.lat.toFixed(4)}, {userLocation.lon.toFixed(4)}
+        </p>
+      )}
 
       <ul className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {allListings.map((item) => (
@@ -428,19 +466,91 @@ function Listings({ user }) {
                 className="w-full h-48 object-cover mb-2 rounded"
               />
             )}
-            <strong>{item.title}</strong>
+
+            <strong>{item.title}</strong> by {item.owner_username}
             <br />
-            Condition: {item.condition.replace('_', ' ')}
+            Condition: {item.condition.replace('_', ' ')} | Category: {item.category}
             <br />
-            Category: {item.category}
+            Location: {item.location_coords || 'Not specified'}
             <br />
             Eco Impact: {item.eco_impact.toFixed(1)} kg CO₂ saved
+            <br />
+
+            {userLocation && item.distance && (
+              <span className="text-sm text-gray-600">
+                Distance: {item.distance.km.toFixed(1)} km
+              </span>
+            )}
+
+            <button
+              onClick={() => handleMessage(item.id)}
+              className="mt-2 w-full bg-blue-500 text-white p-2 rounded"
+            >
+              Send Message
+            </button>
           </li>
         ))}
       </ul>
     </div>
   );
 }
+
+function Inbox({ user }) {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/inbox/`);
+        setMessages(res.data);
+      } catch (err) {
+        console.error('Error fetching messages:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMessages();
+  }, []);
+
+  if (loading) return <div className="p-8">Loading inbox...</div>;
+
+  return (
+    <div className="p-8">
+      <h2 className="text-2xl mb-4">Your Inbox ({messages.length} unread)</h2>
+
+      <ul className="space-y-2">
+        {messages.map((msg) => (
+          <li key={msg.id} className="bg-white p-4 rounded shadow">
+            <strong>From: {msg.sender_username}</strong> about{' '}
+            <em>{msg.listing.title}</em>
+            <br />
+            {msg.content}
+            <br />
+            <small>{new Date(msg.created_at).toLocaleString()}</small>
+
+            <button
+              onClick={async () => {
+                // Mark as read (simple PUT; add endpoint if needed)
+                await axios.patch(`${API_BASE}/messages/${msg.id}/`, { is_read: true });
+                // Refresh or update local
+                window.location.reload();
+              }}
+              className="ml-2 text-blue-500"
+            >
+              Mark Read
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {messages.length === 0 && (
+        <p>No messages yet. Browse swaps to start chatting!</p>
+      )}
+    </div>
+  );
+}
+
 
 export default App;
 
