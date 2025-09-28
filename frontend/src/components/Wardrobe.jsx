@@ -42,7 +42,6 @@ function Wardrobe({ user, apiBase }) {
     submitData.append('title', formData.title);
     submitData.append('description', formData.description);
     submitData.append('condition', formData.condition);
-    submitData.append('category', formData.category);
     if (formData.location) submitData.append('location', formData.location);
     if (formData.image) submitData.append('image', formData.image);
 
@@ -58,14 +57,13 @@ function Wardrobe({ user, apiBase }) {
         title: '',
         description: '',
         condition: 'good',
-        category: 'mixed',
         location: '',
         image: null,
       });
 
     } catch (err) {
       console.error('Error creating listing:', err);
-      setError('Failed to create listing: ' + (err.response?.data?.detail || err.response?.data || err.message));  // IMPROVED: DRF-specific
+      setError('Failed to create listing: ' + (err.response?.data?.detail || err.response?.data || err.message));
     } finally {
       setSubmitting(false);
     }
@@ -118,20 +116,6 @@ function Wardrobe({ user, apiBase }) {
           {['new', 'like_new', 'good', 'fair'].map((c) => (
             <option key={c} value={c}>
               {c.replace('_', ' ').toUpperCase()}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={formData.category}
-          onChange={(e) =>
-            setFormData({ ...formData, category: e.target.value })
-          }
-          className="w-full p-2 mb-2 border rounded"
-        >
-          {['cotton', 'synthetic', 'mixed'].map((c) => ( 
-            <option key={c} value={c}>
-              {c.charAt(0).toUpperCase() + c.slice(1)}
             </option>
           ))}
         </select>
