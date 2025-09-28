@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from .models import Wardrobe, ClothingListing
+from .models import Wardrobe, ClothingListing, UserLocation, Message
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -35,6 +35,9 @@ class WardrobeSerializer(serializers.ModelSerializer):
 
 
 class ClothingListingSerializer(serializers.ModelSerializer):
+    owner_username = serializers.CharField(source='wardrobe.user.username', read_only=True)
+    location_coords = serializers.SerializerMethodField()
+
     class Meta:
         model = ClothingListing
         fields = '__all__'
@@ -51,4 +54,24 @@ class ClothingListingSerializer(serializers.ModelSerializer):
                 instance.save()
             except ValueError:
                 pass
-        return instance    
+        return instance
+    
+    def get_location_coords(self, obj):
+        if obj.location:
+            return f"{obj.location.x}, {obj.location.y}"
+        return None
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender_username = serializers.CharField(source='sender.username', read_only=True)
+    receiver_username = serializers.CharField(source='receiver.username', read_only=True) 
+
+    class Meta:
+        model = Message
+        fields = '__all__'
+        read_only_fields = ('id', 'created_at', 'is_read', 'sender_username', 'receiver_username')  
+
+class UserLocationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserLocation
+        fields = '__all__'             
