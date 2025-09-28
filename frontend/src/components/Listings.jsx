@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-function Listings({ user }) {
+function Listings({ user, apiBase }) {
   const [allListings, setAllListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [error, setError] = useState('');
+  const [geoError, setGeoError] = useState('');
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -15,48 +16,56 @@ function Listings({ user }) {
             lat: position.coords.latitude,
             lon: position.coords.longitude,
           });
+          setGeoError('');
         },
         (err) => {
-          setError('Location access denied. Showing all public listings.');
           console.error('Geolocation error:', err);
+          setGeoError('Location access denied. Showing all public listings.');
+          setError('');
         }
       );
     } else {
-      setError('Geolocation not supported.');
+      setGeoError('Geolocation not supported. Showing all public listings.');
     }
   }, []);
 
   useEffect(() => {
     const fetchListings = async () => {
       setLoading(true);
+      setError('');
       try {
-        let url = `${API_BASE}/public-listings/`;
+        let url = `${apiBase}/public-listings/`;
         if (userLocation) {
-          url = `${API_BASE}/nearby-listings/?lat=${userLocation.lat}&lon=${userLocation.lon}&radius=10`;
+          url = `${apiBase}/nearby-listings/?lat=${userLocation.lat}&lon=${userLocation.lon}&radius=10`;
         }
+        console.log('Fetching listings from:', url);
         const res = await axios.get(url);
+        console.log('Listings response:', res.data);
         setAllListings(res.data);
       } catch (err) {
         console.error('Error fetching listings:', err);
-        setError('Failed to load listings.');
+        setError('Failed to load listings: ' + (err.response?.data?.detail || err.message));
       } finally {
         setLoading(false);
       }
     };
     fetchListings();
-  }, [userLocation]);
+  }, [userLocation, apiBase]);
 
   const handleMessage = async (listingId) => {
     const content = prompt('Enter your message:');
-    if (!content) return;
+    if (!content || content.trim() === '') return;
     try {
-      await axios.post(`${API_BASE}/messages/`, {
+      console.log('Sending message for listing:', listingId, 'Content:', content);
+      await axios.post(`${apiBase}/messages/`, { 
         listing: listingId,
         content: content,
       });
-      alert('Message sent!');
+      console.log('Message sent successfully'); 
+      alert('Message sent! Check your inbox or the recipient\'s.');
     } catch (err) {
-      alert('Failed to send message: ' + err.message);
+      console.error('Error sending message:', err);
+      alert('Failed to send message: ' + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -69,8 +78,12 @@ function Listings({ user }) {
         Nearby Swaps ({allListings.length} within {userLocation ? '10km' : 'all areas'})
       </h2>
 
+      {geoError && (
+        <p className="mb-4 text-yellow-600 text-sm">{geoError}</p>
+      )}
+
       {userLocation && (
-        <p className="mb-4 text-sm">
+        <p className="mb-4 text-sm text-gray-600">
           Your location: {userLocation.lat.toFixed(4)}, {userLocation.lon.toFixed(4)}
         </p>
       )}
@@ -80,37 +93,43 @@ function Listings({ user }) {
           <li key={item.id} className="bg-white p-4 rounded shadow">
             {item.image && (
               <img
-                src={`http://localhost:8000${item.image}`}
+                src={`http://localhost:8000${item.image}`} 
                 alt={item.title}
                 className="w-full h-48 object-cover mb-2 rounded"
+                onError={(e) => { e.target.style.display = 'none'; }}
               />
             )}
 
             <strong>{item.title}</strong> by {item.owner_username}
             <br />
-            Condition: {item.condition.replace('_', ' ')} | Category: {item.category}
+            Condition: {item.condition?.replace('_', ' ') || 'Unknown'} | Category: {item.category || 'General'}
             <br />
             Location: {item.location_coords || 'Not specified'}
             <br />
-            Eco Impact: {item.eco_impact.toFixed(1)} kg CO₂ saved
+            Eco Impact: {item.eco_impact?.toFixed(1) || '0'} kg CO₂ saved 
             <br />
 
             {userLocation && item.distance && (
-              <span className="text-sm text-gray-600">
-                Distance: {item.distance.km.toFixed(1)} km
+              <span className="text-sm text-gray-600 block">
+                Distance: {item.distance.km?.toFixed(1) || item.distance?.toFixed(1)} km 
               </span>
             )}
 
             <button
               onClick={() => handleMessage(item.id)}
-              className="mt-2 w-full bg-blue-500 text-white p-2 rounded"
+              className="mt-2 w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
             >
               Send Message
             </button>
           </li>
         ))}
       </ul>
+
+      {allListings.length === 0 && !loading && (
+        <p className="text-gray-500 text-center mt-8">No swaps available. Add one to your wardrobe or try broadening your search!</p>
+      )}
     </div>
   );
 }
+
 export default Listings;

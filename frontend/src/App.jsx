@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';  // Added Link
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Home from './components/Home';
@@ -19,20 +19,32 @@ axios.interceptors.request.use((config) => {
 });
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser ] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
   useEffect(() => {
-    if (token) {
-      setUser({ username: localStorage.getItem('username') });
+    const initialToken = localStorage.getItem('token');
+    const initialUsername = localStorage.getItem('username');
+    if (initialToken && initialUsername) {
+      setToken(initialToken);
+      setUser ({ username: initialUsername });
     }
-  }, [token]);
+  }, []);
+
+  useEffect(() => {
+    if (token && !user) {
+      const username = localStorage.getItem('username');
+      if (username) {
+        setUser ({ username: username });
+      }
+    }
+  }, [token, user]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
     setToken(null);
-    setUser(null);
+    setUser (null);
   };
 
   return (
@@ -43,9 +55,9 @@ function App() {
           {user && (
             <div className="flex items-center space-x-4">
               <nav className="space-x-4">
-                <a href="/wardrobe" className="hover:underline">My Wardrobe</a>
-                <a href="/listings" className="hover:underline">Browse Swaps</a>
-                <a href="/inbox" className="hover:underline">Inbox</a>
+                <Link to="/wardrobe" className="hover:underline">My Wardrobe</Link>
+                <Link to="/listings" className="hover:underline">Browse Swaps</Link>
+                <Link to="/inbox" className="hover:underline">Inbox</Link>
               </nav>
               <button onClick={handleLogout} className="bg-red-500 px-4 py-1 rounded">Logout</button>
             </div>
@@ -53,11 +65,11 @@ function App() {
         </header>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/register" element={<Register setUser={setUser} setToken={setToken} />} />
-          <Route path="/login" element={<Login setUser={setUser} setToken={setToken} />} />
-          <Route path="/wardrobe" element={user ? <Wardrobe user={user} /> : <Navigate to="/login" />} />
-          <Route path="/listings" element={user ? <Listings user={user} /> : <Navigate to="/login" />} />
-          <Route path="/inbox" element={user ? <Inbox user={user} /> : <Navigate to="/login" />} />
+          <Route path="/register" element={<Register setUser ={setUser } setToken={setToken} apiBase={API_BASE}/>} />
+          <Route path="/login" element={<Login setUser ={setUser } setToken={setToken} apiBase={API_BASE}/>} />
+          <Route path="/wardrobe" element={user ? (<Wardrobe user={user} apiBase={API_BASE}/>) : (<Navigate to="/login" />)} />
+          <Route path="/listings" element={user ? (<Listings user={user} apiBase={API_BASE}/>) : (<Navigate to="/login" />)} />
+          <Route path="/inbox" element={user ? (<Inbox user={user} apiBase={API_BASE}/>) : (<Navigate to="/login" />)} />
         </Routes>
       </div>
     </Router>
@@ -65,4 +77,3 @@ function App() {
 }
 
 export default App;
-

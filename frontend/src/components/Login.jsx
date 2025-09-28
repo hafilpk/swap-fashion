@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { useNavigate, Link } from 'react-router-dom';
 
-function Login({ setUser, setToken }) {
+function Login({ setUser, setToken, apiBase }) {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(`${API_BASE}/auth/login/`, formData);
+      const res = await axios.post(`${apiBase}/auth/login/`, formData);
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('username', res.data.user.username);
       setToken(res.data.token);
       setUser(res.data.user);
-      window.location.href = '/wardrobe';
+      navigate('/wardrobe');
     } catch (err) {
       setError('Login failed: ' + (err.response?.data || err.message));
     }
@@ -49,9 +51,9 @@ function Login({ setUser, setToken }) {
       </form>
       <p className="mt-4">
         New user?{' '}
-        <a href="/register" className="text-green-500">
+        <Link to="/register" className="text-green-500">  {/* FIXED: Use Link */}
           Register
-        </a>
+        </Link>
       </p>
     </div>
   );

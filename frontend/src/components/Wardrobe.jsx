@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-function Wardrobe({ user }) {
+function Wardrobe({ user, apiBase }) {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -13,24 +13,30 @@ function Wardrobe({ user }) {
     image: null,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(''); 
 
   useEffect(() => {
     const fetchListings = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/listings/`);
+        console.log('Fetching wardrobe from:', `${apiBase}/listings/`);
+        const res = await axios.get(`${apiBase}/listings/`);
+        console.log('Wardrobe response:', res.data); 
         setListings(res.data);
+        setError('');
       } catch (err) {
         console.error('Error fetching wardrobe:', err);
+        setError('Failed to load wardrobe: ' + (err.response?.data?.detail || err.message));  // IMPROVED: UI error
       } finally {
         setLoading(false);
       }
     };
     fetchListings();
-  }, []);
+  }, [apiBase]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    setError('');
 
     const submitData = new FormData();
     submitData.append('title', formData.title);
@@ -41,9 +47,12 @@ function Wardrobe({ user }) {
     if (formData.image) submitData.append('image', formData.image);
 
     try {
-      await axios.post(`${API_BASE}/listings/`, submitData, {
+      console.log('Creating listing with data:', Object.fromEntries(submitData));  // TEMP DEBUG (FormData log)
+      const res = await axios.post(`${apiBase}/listings/`, submitData, {  // FIXED: Use apiBase prop
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      console.log('New listing created:', res.data);
+      setListings((prev) => [...prev, res.data]);
 
       setFormData({
         title: '',
@@ -53,11 +62,10 @@ function Wardrobe({ user }) {
         location: '',
         image: null,
       });
-      const res = await axios.get(`${API_BASE}/listings/`);
-      setListings(res.data);
+
     } catch (err) {
       console.error('Error creating listing:', err);
-      alert('Failed to create listing: ' + (err.response?.data || err.message));
+      setError('Failed to create listing: ' + (err.response?.data?.detail || err.response?.data || err.message));  // IMPROVED: DRF-specific
     } finally {
       setSubmitting(false);
     }
@@ -68,6 +76,7 @@ function Wardrobe({ user }) {
   };
 
   if (loading) return <div className="p-8">Loading wardrobe...</div>;
+  if (error) return <div className="p-8 text-red-500">{error}</div>;
 
   return (
     <div className="p-8">
@@ -120,7 +129,7 @@ function Wardrobe({ user }) {
           }
           className="w-full p-2 mb-2 border rounded"
         >
-          {['cotton', 'synthetic', 'mixed'].map((c) => (
+          {['cotton', 'synthetic', 'mixed'].map((c) => ( 
             <option key={c} value={c}>
               {c.charAt(0).toUpperCase() + c.slice(1)}
             </option>
@@ -165,20 +174,26 @@ function Wardrobe({ user }) {
                 src={`http://localhost:8000${item.image}`}
                 alt={item.title}
                 className="w-20 h-20 object-cover rounded"
+                onError={(e) => { e.target.style.display = 'none'; }}
               />
             )}
             <div>
               <strong>{item.title}</strong> -{' '}
-              {item.condition.replace('_', ' ')}
+              {item.condition?.replace('_', ' ') || 'Unknown'}
               <br />
-              Category: {item.category}
+              Category: {item.category || 'General'}
               <br />
-              Eco Impact: {item.eco_impact.toFixed(1)} kg CO₂ saved
+              Eco Impact: {item.eco_impact?.toFixed(1) || '0'} kg CO₂ saved  
             </div>
           </li>
         ))}
       </ul>
+
+      {listings.length === 0 && !loading && (
+        <p className="text-gray-500 mt-4">No items yet. Add one to start swapping!</p>  
+      )}
     </div>
   );
 }
+
 export default Wardrobe;
