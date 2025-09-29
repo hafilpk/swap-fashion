@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 function Listings({ user, apiBase }) {
   const [allListings, setAllListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
-  const [error, setError] = useState('');
-  const [geoError, setGeoError] = useState('');
+  const [error, setError] = useState("");
+  const [geoError, setGeoError] = useState("");
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -16,35 +16,33 @@ function Listings({ user, apiBase }) {
             lat: position.coords.latitude,
             lon: position.coords.longitude,
           });
-          setGeoError('');
+          setGeoError("");
         },
         (err) => {
-          console.error('Geolocation error:', err);
-          setGeoError('Location access denied. Showing all public listings.');
-          setError('');
+          console.error("Geolocation error:", err);
+          setGeoError("Location access denied. Showing all public listings.");
+          setError("");
         }
       );
     } else {
-      setGeoError('Geolocation not supported. Showing all public listings.');
+      setGeoError("Geolocation not supported. Showing all public listings.");
     }
   }, []);
 
   useEffect(() => {
     const fetchListings = async () => {
       setLoading(true);
-      setError('');
+      setError("");
       try {
         let url = `${apiBase}/public-listings/`;
         if (userLocation) {
           url = `${apiBase}/nearby-listings/?lat=${userLocation.lat}&lon=${userLocation.lon}&radius=10`;
         }
-        console.log('Fetching listings from:', url);
         const res = await axios.get(url);
-        console.log('Listings response:', res.data);
         setAllListings(res.data);
       } catch (err) {
-        console.error('Error fetching listings:', err);
-        setError('Failed to load listings: ' + (err.response?.data?.detail || err.message));
+        console.error("Error fetching listings:", err);
+        setError("Failed to load listings: " + (err.response?.data?.detail || err.message));
       } finally {
         setLoading(false);
       }
@@ -53,80 +51,88 @@ function Listings({ user, apiBase }) {
   }, [userLocation, apiBase]);
 
   const handleMessage = async (listingId) => {
-    const content = prompt('Enter your message:');
-    if (!content || content.trim() === '') return;
+    const content = prompt("Enter your message:");
+    if (!content || content.trim() === "") return;
     try {
-      console.log('Sending message for listing:', listingId, 'Content:', content);
-      await axios.post(`${apiBase}/messages/`, { 
+      await axios.post(`${apiBase}/messages/`, {
         listing: listingId,
         content: content,
       });
-      console.log('Message sent successfully'); 
-      alert('Message sent! Check your inbox or the recipient\'s.');
+      alert("Message sent! Check your inbox.");
     } catch (err) {
-      console.error('Error sending message:', err);
-      alert('Failed to send message: ' + (err.response?.data?.detail || err.message));
+      console.error("Error sending message:", err);
+      alert("Failed to send message: " + (err.response?.data?.detail || err.message));
     }
   };
 
-  if (loading) return <div className="p-8">Loading nearby swaps...</div>;
-  if (error) return <div className="p-8 text-red-500">{error}</div>;
+  if (loading) return <div className="p-5 text-center">Loading swaps...</div>;
+  if (error) return <div className="alert alert-danger m-3 text-center">{error}</div>;
 
   return (
-    <div className="p-8">
-      <h2 className="text-2xl mb-4">
-        Nearby Swaps ({allListings.length} within {userLocation ? '10km' : 'all areas'})
+    <div className="container py-4">
+      <h2 className="mb-4">
+        Fashion Items{" "}
+        <small className="text-muted">
+          ({allListings.length} {userLocation ? "within 10km" : "in all areas"})
+        </small>
       </h2>
 
-      {geoError && (
-        <p className="mb-4 text-yellow-600 text-sm">{geoError}</p>
-      )}
+      {geoError && <div className="alert alert-warning">{geoError}</div>}
 
       {userLocation && (
-        <p className="mb-4 text-sm text-gray-600">
+        <p className="text-muted mb-3">
           Your location: {userLocation.lat.toFixed(4)}, {userLocation.lon.toFixed(4)}
         </p>
       )}
 
-      <ul className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="row">
         {allListings.map((item) => (
-          <li key={item.id} className="bg-white p-4 rounded shadow">
-            {item.image && (
-              <img
-                src={`http://localhost:8000${item.image}`} 
-                alt={item.title}
-                className="w-full h-48 object-cover mb-2 rounded"
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-            )}
+          <div key={item.id} className="col-md-4 mb-4">
+            <div className="card h-100 shadow-sm">
+              {item.image && (
+                <img
+                  src={`http://localhost:8000${item.image}`}
+                  alt={item.title}
+                  className="card-img-top"
+                  style={{ objectFit: "cover", height: "200px" }}
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                  }}
+                />
+              )}
+              <div className="card-body d-flex flex-column">
+                <h5 className="card-title">{item.title}</h5>
+                <h6 className="card-subtitle mb-2 text-muted">👤 {item.owner_username}</h6>
 
-            <strong>{item.title}</strong> by {item.owner_username}
-            <br />
-            Condition: {item.condition?.replace('_', ' ') || 'Unknown'} | Category: {item.category || 'General'}
-            <br />
-            Location: {item.location_coords || 'Not specified'}
-            <br />
-            Eco Impact: {item.eco_impact?.toFixed(1) || '0'} kg CO₂ saved 
-            <br />
+                <p className="card-text mb-2">
+                  <strong>Condition:</strong> {item.condition?.replace("_", " ") || "Unknown"} <br />
+                  <strong>Category:</strong> {item.category || "General"} <br />
+                  <strong>Location:</strong> {item.location_coords || "Not specified"} <br />
+                  <strong>Eco Impact:</strong> {item.eco_impact?.toFixed(1) || "0"} kg CO₂ saved
+                </p>
 
-            {userLocation && item.distance && (
-              <span className="text-sm text-gray-600 block">
-                Distance: {item.distance.km?.toFixed(1) || item.distance?.toFixed(1)} km 
-              </span>
-            )}
+                {userLocation && item.distance && (
+                  <p className="text-muted mb-2">
+                    Distance: {item.distance.km?.toFixed(1) || item.distance?.toFixed(1)} km
+                  </p>
+                )}
 
-            <button
-              onClick={() => handleMessage(item.id)}
-              className="mt-2 w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-            >
-              Send Message
-            </button>
-          </li>
+                <button
+                  onClick={() => handleMessage(item.id)}
+                  className="btn btn-primary mt-auto"
+                >
+                  Send Message
+                </button>
+              </div>
+            </div>
+          </div>
         ))}
-      </ul>
+      </div>
 
       {allListings.length === 0 && !loading && (
-        <p className="text-gray-500 text-center mt-8">No swaps available. Add one to your wardrobe or try broadening your search!</p>
+        <div className="text-center text-muted mt-4">
+          No swaps available. <br /> Add one to your wardrobe or broaden your search!
+        </div>
       )}
     </div>
   );
