@@ -59,7 +59,7 @@ function Register({ setUser, setToken, apiBase }) {
       </form>
       <p className="mt-4">
         Already have an account?{' '}
-        <Link to="/login" className="text-blue-500">  {/* FIXED: Use Link */}
+        <Link to="/login" className="text-blue-500">
           Login
         </Link>
       </p>

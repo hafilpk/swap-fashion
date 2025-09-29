@@ -25,7 +25,7 @@ function Wardrobe({ user, apiBase }) {
         setError('');
       } catch (err) {
         console.error('Error fetching wardrobe:', err);
-        setError('Failed to load wardrobe: ' + (err.response?.data?.detail || err.message));  // IMPROVED: UI error
+        setError('Failed to load wardrobe: ' + (err.response?.data?.detail || err.message));
       } finally {
         setLoading(false);
       }
@@ -46,8 +46,8 @@ function Wardrobe({ user, apiBase }) {
     if (formData.image) submitData.append('image', formData.image);
 
     try {
-      console.log('Creating listing with data:', Object.fromEntries(submitData));  // TEMP DEBUG (FormData log)
-      const res = await axios.post(`${apiBase}/listings/`, submitData, {  // FIXED: Use apiBase prop
+      console.log('Creating listing with data:', Object.fromEntries(submitData));
+      const res = await axios.post(`${apiBase}/listings/`, submitData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       console.log('New listing created:', res.data);

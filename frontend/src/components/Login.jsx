@@ -51,7 +51,7 @@ function Login({ setUser, setToken, apiBase }) {
       </form>
       <p className="mt-4">
         New user?{' '}
-        <Link to="/register" className="text-green-500">  {/* FIXED: Use Link */}
+        <Link to="/register" className="text-green-500">
           Register
         </Link>
       </p>
